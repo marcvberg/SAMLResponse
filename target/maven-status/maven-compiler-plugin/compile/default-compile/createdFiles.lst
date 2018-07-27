@@ -1,0 +1,3 @@
+com\amway\integration\saml\CreateSAMLResponse.class
+com\amway\integration\saml\CertManager.class
+com\amway\integration\saml\SamlAssertionProducer.class
