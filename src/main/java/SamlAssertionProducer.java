@@ -62,6 +62,7 @@ import org.opensaml.xml.signature.impl.SignatureBuilder;
 import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Element;
 import org.opensaml.xml.security.credential.Credential;
+import org.opensaml.xml.security.x509.BasicX509Credential;
 
 
 
@@ -192,7 +193,8 @@ public class SamlAssertionProducer
 	
 		SubjectConfirmationDataBuilder dataBuilder = new SubjectConfirmationDataBuilder();
 		SubjectConfirmationData subjectConfirmationData = dataBuilder.buildObject();
-		subjectConfirmationData.setNotOnOrAfter(currentDate);
+		subjectConfirmationData.setNotOnOrAfter(currentDate.plusMinutes(5));
+		subjectConfirmationData.setNotBefore(currentDate.minusMinutes(5));
 		
 		SubjectConfirmationBuilder subjectConfirmationBuilder = new SubjectConfirmationBuilder();
 		SubjectConfirmation subjectConfirmation = subjectConfirmationBuilder.buildObject();
@@ -269,7 +271,7 @@ public class SamlAssertionProducer
 	{
 		if(publicKeyLocation != null && privateKeyLocation != null) 
 		{
-			Credential credential = certManager.getSigningCredential(publicKeyLocation, privateKeyLocation);
+			BasicX509Credential credential = (BasicX509Credential) certManager.getSigningCredential(publicKeyLocation, privateKeyLocation);
 			SignatureBuilder builder = new SignatureBuilder();
 			Signature signature = builder.buildObject();
 			signature.setSigningCredential(credential);
@@ -278,13 +280,13 @@ public class SamlAssertionProducer
 			
 			KeyInfo keyInfo = (KeyInfo) buildXMLObject(KeyInfo.DEFAULT_ELEMENT_NAME);
 			X509Data data = (X509Data) buildXMLObject(X509Data.DEFAULT_ELEMENT_NAME);
+			java.security.cert.X509Certificate x509cert = credential.getEntityCertificate();
 			org.opensaml.xml.signature.X509Certificate cert = (org.opensaml.xml.signature.X509Certificate) buildXMLObject(org.opensaml.xml.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
-			String value = org.apache.xml.security.utils.Base64.encode(credential.getPublicKey().getEncoded());
+			String value = org.apache.xml.security.utils.Base64.encode(x509cert.getEncoded());
 			cert.setValue(value);
 			data.getX509Certificates().add(cert);
 			keyInfo.getX509Datas().add(data);
 			signature.setKeyInfo(keyInfo);
-
 			
 			return signature;
 		}

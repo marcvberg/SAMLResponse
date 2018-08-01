@@ -22,9 +22,9 @@ public class CreateSAMLResponse
 	{
 		HashMap<String, List<String>> attributes = new HashMap<String, List<String>>();
 		String issuer = "issuer";
-		String subject = "subjkect";
-		String privateKey = "servicecatalog-dv-privkey-20180103.pkcs12";
-		String publicKey = "servicecatalog-dv-req-20180103.cer";
+		String subject = "subject";
+		String privateKey = "private_key.pkcs12";
+		String publicKey = "public_key.cer";
 		Integer samlAssertionExpirationDays = 90;
 		List<String> domain = Arrays.asList("api.amwayglobal.com");
 		List<String> roles = Arrays.asList("login");
