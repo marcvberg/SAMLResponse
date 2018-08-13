@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.Base64;
+
 import org.joda.time.DateTime;
 import org.opensaml.saml2.core.Response;
 import org.opensaml.saml2.core.impl.ResponseMarshaller;
@@ -42,7 +44,7 @@ public class CreateSAMLResponse
 		SamlAssertionProducer producer = new SamlAssertionProducer();
 		producer.setPrivateKeyLocation(privateKey);
 		producer.setPublicKeyLocation(publicKey);
-		
+		producer.setDestination("https://api.amway.com/rest/v1/auth");
 		Response responseInitial = producer.createSAMLResponse(subject, new DateTime(), "password", attributes, issuer, samlAssertionExpirationDays);
 		
 		ResponseMarshaller marshaller = new ResponseMarshaller();
@@ -53,6 +55,8 @@ public class CreateSAMLResponse
 		String responseStr = new String(baos.toByteArray());
 		
 		System.out.println(responseStr);
+		Base64.Encoder encoder = Base64.getEncoder();
+		System.out.println(encoder.encodeToString(responseStr.getBytes("utf-8")));
 	}
 	
 }

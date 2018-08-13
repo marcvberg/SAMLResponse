@@ -63,7 +63,7 @@ import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Element;
 import org.opensaml.xml.security.credential.Credential;
 import org.opensaml.xml.security.x509.BasicX509Credential;
-
+import org.opensaml.xml.signature.impl.X509CertificateBuilder;
 
 
 public class SamlAssertionProducer 
@@ -71,6 +71,7 @@ public class SamlAssertionProducer
 
 	private String privateKeyLocation;
 	private String publicKeyLocation;
+	private String destination;
 	private CertManager certManager = new CertManager();
 	
 	public Response createSAMLResponse(final String subjectId, final DateTime authenticationTime, final String credentialType, final HashMap<String, List<String>> attributes, String issuer, Integer samlAssertionDays) 
@@ -142,9 +143,14 @@ public class SamlAssertionProducer
 		this.publicKeyLocation = publicKeyLocation;
 	}
 	
+	public void setDestination(String destination)
+	{	this.destination = destination; }
+	
 	private Response createResponse(final DateTime issueDate, Issuer issuer, Status status, Assertion assertion) {
 		ResponseBuilder responseBuilder = new ResponseBuilder();
 		Response response = responseBuilder.buildObject();
+		if(destination != null)
+		{	response.setDestination(destination); }
 		response.setID(UUID.randomUUID().toString());
 		response.setIssueInstant(issueDate);
 		response.setVersion(SAMLVersion.VERSION_20);
@@ -274,18 +280,22 @@ public class SamlAssertionProducer
 			BasicX509Credential credential = (BasicX509Credential) certManager.getSigningCredential(publicKeyLocation, privateKeyLocation);
 			SignatureBuilder builder = new SignatureBuilder();
 			Signature signature = builder.buildObject();
+			signature.setNoNamespaceSchemaLocation("http://www.w3.org/2000/09/xmldsig#");
 			signature.setSigningCredential(credential);
-			signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA1);
+			signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
 			signature.setCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
 			
 			KeyInfo keyInfo = (KeyInfo) buildXMLObject(KeyInfo.DEFAULT_ELEMENT_NAME);
 			X509Data data = (X509Data) buildXMLObject(X509Data.DEFAULT_ELEMENT_NAME);
 			java.security.cert.X509Certificate x509cert = credential.getEntityCertificate();
-			org.opensaml.xml.signature.X509Certificate cert = (org.opensaml.xml.signature.X509Certificate) buildXMLObject(org.opensaml.xml.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
+			//org.opensaml.xml.signature.X509Certificate cert = (org.opensaml.xml.signature.X509Certificate) buildXMLObject(org.opensaml.xml.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
+			X509CertificateBuilder x509CertificateBuilder = new X509CertificateBuilder();
+			org.opensaml.xml.signature.X509Certificate cert = x509CertificateBuilder.buildObject("http://www.w3.org/2000/09/xmldsig#", "X509Certificate", "ds");
 			String value = org.apache.xml.security.utils.Base64.encode(x509cert.getEncoded());
-			cert.setValue(value);
+			cert.setValue(wrapAt(value, 64));
 			data.getX509Certificates().add(cert);
 			keyInfo.getX509Datas().add(data);
+			
 			signature.setKeyInfo(keyInfo);
 			
 			return signature;
@@ -300,5 +310,25 @@ public class SamlAssertionProducer
 		if (builder == null) 
 		{	throw new Exception("Unable to retrieve builder for object QName " + objectQName); }
 		return builder.buildObject(objectQName.getNamespaceURI(), objectQName.getLocalPart(), objectQName.getPrefix());
+	}
+	
+	private String wrapAt(String input, int lineLength)
+	{
+		if(input == null)
+		{	return null; }
+		int maxPos = input.length();
+		if(maxPos < lineLength)
+		{	return input; }
+		StringBuilder sb = new StringBuilder();
+		int currPos = 0;
+		while(currPos < maxPos)
+		{
+			int endPos = Math.min(currPos+lineLength, maxPos);
+			if(currPos > 0)
+			{	sb.append("\n"); }
+			sb.append(input.substring(currPos, endPos));
+			currPos = endPos;
+		}
+		return sb.toString();
 	}
 }
