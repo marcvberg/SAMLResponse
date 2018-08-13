@@ -1,6 +1,9 @@
 package com.amway.integration.saml;
 
 import java.io.ByteArrayOutputStream;
+import java.security.cert.CertificateEncodingException;
+//import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -9,19 +12,14 @@ import java.util.UUID;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-
-import org.opensaml.xml.signature.KeyValue;
-import org.opensaml.xml.signature.KeyInfo;
-import org.opensaml.xml.signature.X509Data;
 import javax.xml.namespace.QName;
-import org.opensaml.xml.XMLObjectBuilder;
-import org.opensaml.xml.XMLObject;
 
-
-import org.opensaml.xml.Configuration;
+import org.apache.xml.security.c14n.Canonicalizer;
 import org.joda.time.DateTime;
+
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.SAMLVersion;
+import org.opensaml.common.impl.SAMLObjectContentReference;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AttributeStatement;
@@ -53,17 +51,30 @@ import org.opensaml.saml2.core.impl.StatusCodeBuilder;
 import org.opensaml.saml2.core.impl.SubjectBuilder;
 import org.opensaml.saml2.core.impl.SubjectConfirmationBuilder;
 import org.opensaml.saml2.core.impl.SubjectConfirmationDataBuilder;
+
+import org.opensaml.xml.Configuration;
+import org.opensaml.xml.XMLObject;
+import org.opensaml.xml.XMLObjectBuilder;
+import org.opensaml.xml.io.Marshaller;
+import org.opensaml.xml.io.MarshallerFactory;
+import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.schema.XSString;
 import org.opensaml.xml.schema.impl.XSStringBuilder;
+import org.opensaml.xml.security.credential.Credential;
+import org.opensaml.xml.security.x509.BasicX509Credential;
+import org.opensaml.xml.security.x509.X509Credential;
+import org.opensaml.xml.signature.KeyInfo;
+import org.opensaml.xml.signature.KeyValue;
+import org.opensaml.xml.signature.SignableXMLObject;
 import org.opensaml.xml.signature.Signature;
 import org.opensaml.xml.signature.SignatureConstants;
 import org.opensaml.xml.signature.Signer;
+import org.opensaml.xml.signature.X509Data;
 import org.opensaml.xml.signature.impl.SignatureBuilder;
-import org.opensaml.xml.util.XMLHelper;
-import org.w3c.dom.Element;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.x509.BasicX509Credential;
 import org.opensaml.xml.signature.impl.X509CertificateBuilder;
+import org.opensaml.xml.util.XMLHelper;
+
+import org.w3c.dom.Element;
 
 
 public class SamlAssertionProducer 
@@ -80,8 +91,8 @@ public class SamlAssertionProducer
 		{
 			DefaultBootstrap.bootstrap();
 			
-			Signature signatureResponse = createSignature();
-			Signature signatureAssert = createSignature();
+			//Signature signatureResponse = createSignature();
+			//Signature signatureAssert = createSignature();
 			Status status = createStatus();
 			Issuer responseIssuer = null;
 			Issuer assertionIssuer = null;
@@ -103,18 +114,15 @@ public class SamlAssertionProducer
 			AuthnStatement authnStatement = createAuthnStatement(authenticationTime);
 			
 			Assertion assertion = createAssertion(new DateTime(), subject, assertionIssuer, authnStatement, attributeStatement);
-			Response response = createResponse(new DateTime(), responseIssuer, status, assertion);
 			
-			assertion.setSignature(signatureAssert);
-			response.setSignature(signatureResponse);
+			Response response = createResponse(new DateTime(), responseIssuer, status, assertion);
 			
 			ResponseMarshaller marshaller = new ResponseMarshaller();
 			Element element = marshaller.marshall(response);
 			
-			if(signatureResponse != null) 
-			{	Signer.signObject(signatureResponse); }
-			if(signatureAssert != null) 
-			{	Signer.signObject(signatureAssert); }
+			setSignature(response, SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256, SignatureConstants.ALGO_ID_DIGEST_SHA1, certManager.getSigningCredential(publicKeyLocation, privateKeyLocation));
+			setSignature(response, SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256, SignatureConstants.ALGO_ID_DIGEST_SHA1, certManager.getSigningCredential(publicKeyLocation, privateKeyLocation));
+			
 			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			XMLHelper.writeNode(element, baos);
@@ -146,6 +154,8 @@ public class SamlAssertionProducer
 	public void setDestination(String destination)
 	{	this.destination = destination; }
 	
+
+	
 	private Response createResponse(final DateTime issueDate, Issuer issuer, Status status, Assertion assertion) {
 		ResponseBuilder responseBuilder = new ResponseBuilder();
 		Response response = responseBuilder.buildObject();
@@ -160,8 +170,45 @@ public class SamlAssertionProducer
 		return response;
 	}
 	
-	private Assertion createAssertion(final DateTime issueDate, Subject subject, Issuer issuer, AuthnStatement authnStatement,
-			                          AttributeStatement attributeStatement) {
+	public SignableXMLObject setSignature(SignableXMLObject signableXMLObject, String signatureAlgorithm, String digestAlgorithm, X509Credential cred)
+		throws Exception
+	{
+		Signature signature = (Signature) buildXMLObject(Signature.DEFAULT_ELEMENT_NAME);
+		signature.setSigningCredential(cred);
+		signature.setSignatureAlgorithm(signatureAlgorithm);
+		signature.setCanonicalizationAlgorithm(Canonicalizer.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+		
+		KeyInfo keyInfo = (KeyInfo) buildXMLObject(KeyInfo.DEFAULT_ELEMENT_NAME);
+		X509Data data = (X509Data) buildXMLObject(X509Data.DEFAULT_ELEMENT_NAME);
+		org.opensaml.xml.signature.X509Certificate cert = (org.opensaml.xml.signature.X509Certificate) buildXMLObject(org.opensaml.xml.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
+		
+		String value = org.apache.xml.security.utils.Base64.encode(cred.getEntityCertificate().getEncoded());
+		
+		cert.setValue(value);
+		data.getX509Certificates().add(cert);
+		keyInfo.getX509Datas().add(data);
+		signature.setKeyInfo(keyInfo);
+		
+		signableXMLObject.setSignature(signature);
+		((SAMLObjectContentReference) signature.getContentReferences().get(0)).setDigestAlgorithm(digestAlgorithm);
+		
+		List<Signature> signatureList = new ArrayList<Signature>();
+		signatureList.add(signature);
+		
+		MarshallerFactory marshallerFactory = org.opensaml.xml.Configuration.getMarshallerFactory();
+		Marshaller marshaller = marshallerFactory.getMarshaller(signableXMLObject);
+		
+		marshaller.marshall(signableXMLObject);
+		
+		org.apache.xml.security.Init.init();
+		Signer.signObjects(signatureList);
+		
+		return signableXMLObject;
+	}
+	
+	
+	private Assertion createAssertion(final DateTime issueDate, Subject subject, Issuer issuer, AuthnStatement authnStatement, AttributeStatement attributeStatement) 
+	{
 		AssertionBuilder assertionBuilder = new AssertionBuilder();
 		Assertion assertion = assertionBuilder.buildObject();
 		assertion.setID(UUID.randomUUID().toString());
@@ -272,6 +319,7 @@ public class SamlAssertionProducer
 
 		return status;
 	}
+	
 	
 	private Signature createSignature() throws Throwable 
 	{

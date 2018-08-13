@@ -25,7 +25,7 @@ public class CertManager {
 	 * @return
 	 * @throws Throwable
 	 */
-	public Credential getSigningCredential(String publicKeyLocation, String privateKeyLocation) throws Throwable {
+	public BasicX509Credential getSigningCredential(String publicKeyLocation, String privateKeyLocation) throws Throwable {
 		// create public key (cert) portion of credential
 		InputStream inStream = new FileInputStream(publicKeyLocation);
 		CertificateFactory cf = CertificateFactory.getInstance("X.509");
