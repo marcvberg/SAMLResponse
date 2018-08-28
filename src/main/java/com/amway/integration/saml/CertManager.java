@@ -1,5 +1,7 @@
 package com.amway.integration.saml;
 
+import org.opensaml.security.x509.BasicX509Credential;
+
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -8,9 +10,6 @@ import java.security.PrivateKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
-
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.x509.BasicX509Credential;
 
 public class CertManager {
 	
@@ -31,7 +30,6 @@ public class CertManager {
 		CertificateFactory cf = CertificateFactory.getInstance("X.509");
 		X509Certificate publicKey = (X509Certificate)cf.generateCertificate(inStream);
 		inStream.close();
-		    
 		// create private key
 		RandomAccessFile raf = new RandomAccessFile(privateKeyLocation, "r");
 		byte[] buf = new byte[(int)raf.length()];
@@ -43,8 +41,8 @@ public class CertManager {
 		PrivateKey privateKey = kf.generatePrivate(kspec);
 		
 		// create credential and initialize
-		BasicX509Credential credential = new BasicX509Credential();
-		credential.setEntityCertificate(publicKey);
+		BasicX509Credential credential = new BasicX509Credential(publicKey);
+		//credential.setEntityCertificate(publicKey);
 		credential.setPrivateKey(privateKey);
 		
 		return credential;

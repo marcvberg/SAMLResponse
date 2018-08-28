@@ -1,6 +1,9 @@
 package com.amway.integration.saml;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -8,10 +11,10 @@ import java.util.List;
 
 import java.util.Base64;
 
+import net.shibboleth.utilities.java.support.xml.SerializeSupport;
 import org.joda.time.DateTime;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.impl.ResponseMarshaller;
-import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.impl.ResponseMarshaller;
 import org.w3c.dom.Element;
 
 import org.springframework.boot.SpringApplication;
@@ -51,9 +54,17 @@ public class CreateSAMLResponse
 		Element element = marshaller.marshall(responseInitial);
 		
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		XMLHelper.writeNode(element, baos);
+		SerializeSupport.writeNode(element, baos);
 		String responseStr = new String(baos.toByteArray());
-		
+		try {
+			BufferedWriter bf = new BufferedWriter(new FileWriter("output.saml"));
+			bf.write(responseStr);
+			bf.close();
+		}
+		catch(IOException e) {
+			e.printStackTrace();
+		}
+
 		System.out.println(responseStr);
 		Base64.Encoder encoder = Base64.getEncoder();
 		System.out.println(encoder.encodeToString(responseStr.getBytes("utf-8")));

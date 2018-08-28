@@ -26,10 +26,41 @@
 
 	<dependencies>
 		<!-- Open SAML -->
+		<!-- https://mvnrepository.com/artifact/org.opensaml/opensaml-core -->
 		<dependency>
 			<groupId>org.opensaml</groupId>
-			<artifactId>opensaml</artifactId>
-			<version>2.5.3</version>
+			<artifactId>opensaml-core</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.opensaml/opensaml-saml-api -->
+		<dependency>
+			<groupId>org.opensaml</groupId>
+			<artifactId>opensaml-saml-api</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.opensaml/opensaml-saml-impl -->
+		<dependency>
+			<groupId>org.opensaml</groupId>
+			<artifactId>opensaml-saml-impl</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.opensaml/opensaml-security-api -->
+		<dependency>
+			<groupId>org.opensaml</groupId>
+			<artifactId>opensaml-security-api</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.opensaml/opensaml-xmlsec-impl -->
+		<dependency>
+			<groupId>org.opensaml</groupId>
+			<artifactId>opensaml-xmlsec-impl</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.opensaml/opensaml-profile-api -->
+		<dependency>
+			<groupId>org.opensaml</groupId>
+			<artifactId>opensaml-profile-api</artifactId>
+			<version>3.3.0</version>
 		</dependency>
 		<!-- Jaxb -->
 		<dependency>
