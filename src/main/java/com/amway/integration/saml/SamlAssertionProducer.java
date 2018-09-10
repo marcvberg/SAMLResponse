@@ -45,7 +45,7 @@ public class SamlAssertionProducer
 	private String destination;
 	private CertManager certManager = new CertManager();
 	
-	public Response createSAMLResponse(final String subjectId, final DateTime authenticationTime, final String credentialType, final HashMap<String, List<String>> attributes, String issuer, Integer samlAssertionDays)
+	public Response createSAMLResponse(final String subjectId, final DateTime authenticationTime, final String credentialType, final HashMap<String, List<String>> attributes, String issuer, Integer samlAssertionDays, String audience)
 	{
 		try
 		{
@@ -70,18 +70,20 @@ public class SamlAssertionProducer
 			
 			if(attributes != null && attributes.size() != 0) 
 			{	attributeStatement = createAttributeStatement(attributes); }
-			
+
 			AuthnStatement authnStatement = createAuthnStatement(authenticationTime);
 			
 			Assertion assertion = createAssertion(new DateTime(), subject, assertionIssuer, authnStatement, attributeStatement);
+
+			assertion.setConditions(createConditions(audience));
 			
 			Response response = createResponse(new DateTime(), responseIssuer, status, assertion);
 			
 			ResponseMarshaller marshaller = new ResponseMarshaller();
 			Element element = marshaller.marshall(response);
 			
-			//setSignature(response, SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256, SignatureConstants.ALGO_ID_DIGEST_SHA256, certManager.getSigningCredential(publicKeyLocation, privateKeyLocation));
 			setSignature(assertion, SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256, SignatureConstants.ALGO_ID_DIGEST_SHA256, certManager.getSigningCredential(publicKeyLocation, privateKeyLocation));
+			setSignature(response, SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256, SignatureConstants.ALGO_ID_DIGEST_SHA256, certManager.getSigningCredential(publicKeyLocation, privateKeyLocation));
 			
 			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -220,6 +222,20 @@ public class SamlAssertionProducer
 		subject.getSubjectConfirmations().add(subjectConfirmation);
 		
 		return subject;
+	}
+
+	private Conditions createConditions(String audienceString) {
+		DateTime currentDate = new DateTime();
+		Conditions conditions = new ConditionsBuilder().buildObject();
+		conditions.setNotBefore(currentDate.minusYears(2));
+		conditions.setNotOnOrAfter(currentDate.plusYears(2));
+
+		AudienceRestriction audienceRestriction = new AudienceRestrictionBuilder().buildObject();
+		Audience audience = new AudienceBuilder().buildObject();
+		audience.setAudienceURI(audienceString);
+		audienceRestriction.getAudiences().add(audience);
+		conditions.getAudienceRestrictions().add(audienceRestriction);
+		return conditions;
 	}
 	
 	private AuthnStatement createAuthnStatement(final DateTime issueDate) {

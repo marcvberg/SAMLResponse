@@ -30,6 +30,7 @@ public class CreateSAMLResponse
 		String subject = "subject";
 		String privateKey = "private_key.pkcs12";
 		String publicKey = "public_key.cer";
+		String audience = "audience";
 		Integer samlAssertionExpirationDays = 90;
 		List<String> domain = Arrays.asList("api.amwayglobal.com");
 		List<String> roles = Arrays.asList("login");
@@ -48,7 +49,7 @@ public class CreateSAMLResponse
 		producer.setPrivateKeyLocation(privateKey);
 		producer.setPublicKeyLocation(publicKey);
 		producer.setDestination("https://api.amway.com/rest/v1/auth");
-		Response responseInitial = producer.createSAMLResponse(subject, new DateTime(), "password", attributes, issuer, samlAssertionExpirationDays);
+		Response responseInitial = producer.createSAMLResponse(subject, new DateTime(), "password", attributes, issuer, samlAssertionExpirationDays, audience);
 		
 		ResponseMarshaller marshaller = new ResponseMarshaller();
 		Element element = marshaller.marshall(responseInitial);
